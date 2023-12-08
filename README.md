@@ -1,6 +1,188 @@
 # Reproducible research: version control and R
 
 \# INSERT ANSWERS HERE #
+#Question 4
+
+```{r}
+#This code below is copied from the question
+#install.packages("ggplot2")
+#install.packages("gridExtra")
+
+library(ggplot2)
+library(gridExtra)
+
+random_walk  <- function (n_steps) {
+  
+  df <- data.frame(x = rep(NA, n_steps), y = rep(NA, n_steps), time = 1:n_steps)
+  
+  df[1,] <- c(0,0,1)
+  
+  for (i in 2:n_steps) {
+    
+    h <- 0.25
+    
+    angle <- runif(1, min = 0, max = 2*pi)
+    
+    df[i,1] <- df[i-1,1] + cos(angle)*h
+    
+    df[i,2] <- df[i-1,2] + sin(angle)*h
+    
+    df[i,3] <- i
+    
+  }
+  
+  return(df)
+  
+}
+
+data1 <- random_walk(500)
+
+plot1 <- ggplot(aes(x = x, y = y), data = data1) +
+  
+  geom_path(aes(colour = time)) +
+  
+  theme_bw() +
+  
+  xlab("x-coordinate") +
+  
+  ylab("y-coordinate")
+
+data2 <- random_walk(500)
+
+plot2 <- ggplot(aes(x = x, y = y), data = data2) +
+  
+  geom_path(aes(colour = time)) +
+  
+  theme_bw() +
+  
+  xlab("x-coordinate") +
+  
+  ylab("y-coordinate")
+
+grid.arrange(plot1, plot2, ncol=2)
+```
+
+- This code has produced two figures of a simulation of a random walk. 
+- The X axis of the figures is the X-coordinate, and the Y-axis is the Y-coordinates.
+- For both of the simulations, they start at coordinates (0,0). At this point in time the line which shows the walk is a dark blue colour, as it transitions through time, it becomes lighter.
+- The walk is simulated for 500 steps. For each of these steps, the simulation moves a set distance of 0.25 at an angle which is randomly generated. It works out the change in the X and Y coordinates by taking the sine and cosine of the angle, and plots this 500 times.
+- The two simulations have different coordinates on the axes due to them moving in different directions randomly.
+- The one on the left moves further down and to the left, whereas the one on the right stays more central.
+
+- A random seed is a starting point for generating a reproducible sequence of random numbers. So, each time the code is run, you will get the same numbers which have been randomly generated.
+- The random number generator function requires a seed to the run the algorithm, so if you know the seed and the generator used, you can predict and reproduce the output of the random number generator. 
+- If the seed is not specified, R instead uses the clock of the system to establish the seed.
+- It is particularly useful for reproducing the same output in simulations.
+
+```{r}
+#Copied the code below from the question but made it be able to reproduce the same outputs every time, by setting a seed for the random numbers.
+random_walk  <- function (n_steps) {
+  
+  df <- data.frame(x = rep(NA, n_steps), y = rep(NA, n_steps), time = 1:n_steps)
+  
+  df[1,] <- c(0,0,1)
+#This here is where I set the seed to 5 (Doesn't have to be this specific number.), and this ensures the same output is reproducible.
+  set.seed(5)
+  
+  for (i in 2:n_steps) {
+    
+    h <- 0.25
+    
+    angle <- runif(1, min = 0, max = 2*pi)
+    
+    df[i,1] <- df[i-1,1] + cos(angle)*h
+    
+    df[i,2] <- df[i-1,2] + sin(angle)*h
+    
+    df[i,3] <- i
+    
+  }
+  
+  return(df)
+  
+}
+
+data1 <- random_walk(500)
+
+plot1 <- ggplot(aes(x = x, y = y), data = data1) +
+  
+  geom_path(aes(colour = time)) +
+  
+  theme_bw() +
+  
+  xlab("x-coordinate") +
+  
+  ylab("y-coordinate")
+
+data2 <- random_walk(500)
+
+plot2 <- ggplot(aes(x = x, y = y), data = data2) +
+  
+  geom_path(aes(colour = time)) +
+  
+  theme_bw() +
+  
+  xlab("x-coordinate") +
+  
+  ylab("y-coordinate")
+
+grid.arrange(plot1, plot2, ncol=2)
+```
+#Question 5
+
+```{r}
+#naming the data frame from cui_etal2014 virusData
+virusData <- read.csv("Cui_etal2014.csv")
+virusData
+#Counting the rows and columns
+rows <- nrow(virusData)
+columns <- ncol(virusData)
+#Printing the number of rows
+rows
+#Printing the number of columns
+columns
+```
+
+- There are 33 rows and 13 columns in the Cui_etal2014.csv file.
+- Taking the natural logarithm of both the virion volume and the genome length would allow a linear model to be fitted to the transformed data.
+
+```{r}
+#Making a new column in virusData called logVolume with the natural logarithm of the virion volumes.
+virusData$logVolume <- log(virusData$Virion.volume..nm.nm.nm.)
+#Making a new column in virusData called logGenome, with the natural logarithm of the genome lengths.
+virusData$logGenome <- log(virusData$Genome.length..kb.)
+#Plotting a scatter graph with logGenome on the x-axis and logVolume on the y-axis.
+ggplot(virusData, aes(x = logGenome, y = logVolume))+
+  labs(x = "Log[Genome Length (kb)]", y = "Log[Virion Volume mm^3]", title = "Transformation to Fit a Linear Model")+
+  geom_point()
+```
+```{r}
+#LogVolume = alpha * logGenomeLength + logBeta
+#Doing a linear regression to find alpha and beta
+linearModel <- lm(logVolume ~ logGenome, data = virusData)
+summary(linearModel)
+```
+- The summary of the linear model shows that alpha is 1.5152, as it is the coefficient of logGenome. The P value for alpha is 6.44e-10, so is statistically significant.
+- The intercept is logBeta.
+- logBeta = 7.0748
+- beta = e^7.0748 
+- beta = 1181.81
+- The P value for beta is 2.28e-10 so is also statistically significant. 
+- In table 2 of the paper it shows that for dsDNA viruses, alpha = 1.52, the alpha I worked out when rounded to 3 significant    figures is also 1.52. The value it showed for the scaling factor beta was 1182, and I also found it to be 1182 when rounded. 
+- So, it can be concluded that the linear model here produced the same values as the paper and is statistically significant.
+
+  ```{r}
+ggplot(virusData, aes(x = logGenome, y = logVolume))+
+  labs(x = "Log[Genome Length (kb)]", y = "Log[Virion Volume mm^3]")+
+#This geom_smooth function adds a linear regression line in blue, and the se = TRUE adds the shading around the lines for the confidence intervals.
+  geom_smooth(method = "lm", se = TRUE, color = "blue")+
+  geom_point()
+```
+
+- Estimated volume of a 300 kb dsDNA virus
+- V = Beta*Genomelength^alpha
+- V = 1181.81 * 300^1.5152
+- V = 6697079
 
 ## Instructions
 
